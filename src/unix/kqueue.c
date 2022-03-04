@@ -160,6 +160,12 @@ void uv__io_poll(uv_loop_t* loop, int timeout) {
                | NOTE_DELETE | NOTE_EXTEND | NOTE_REVOKE;
         op = EV_ADD | EV_ONESHOT; /* Stop the event from firing repeatedly. */
       }
+#if defined(__APPLE__) && (defined(_USE_ASYNC_ADDR_INFO) || defined(_USE_ASYNC_GETNAME_INFO))
+      else if (w->is_mach_port) {
+        filter = EVFILT_MACHPORT;
+        op = EV_ADD | EV_ONESHOT;
+      }
+#endif
 
       EV_SET(events + nevents, w->fd, filter, op, fflags, 0, 0);
 
@@ -318,8 +324,11 @@ void uv__io_poll(uv_loop_t* loop, int timeout) {
       }
 
       revents = 0;
-
+#if defined(__APPLE__) && (defined(_USE_ASYNC_ADDR_INFO) || defined(_USE_ASYNC_GETNAME_INFO))
+      if (ev->filter == EVFILT_READ || ev->filter == EVFILT_MACHPORT) {
+#else
       if (ev->filter == EVFILT_READ) {
+#endif
         if (w->pevents & POLLIN) {
           revents |= POLLIN;
           w->rcount = ev->data;

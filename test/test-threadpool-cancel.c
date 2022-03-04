@@ -184,12 +184,19 @@ TEST_IMPL(threadpool_cancel_getaddrinfo) {
   r = uv_getaddrinfo(loop, reqs + 3, getaddrinfo_cb, "fail", NULL, &hints);
   ASSERT(r == 0);
 
+#if defined(__APPLE__) && defined(_USE_ASYNC_ADDR_INFO)
+  # define TIMEOUT 0
+#else
+  # define TIMEOUT 10
+#endif
+
   ASSERT(0 == uv_timer_init(loop, &ci.timer_handle));
-  ASSERT(0 == uv_timer_start(&ci.timer_handle, timer_cb, 10, 0));
+  ASSERT(0 == uv_timer_start(&ci.timer_handle, timer_cb, TIMEOUT, 0));
   ASSERT(0 == uv_run(loop, UV_RUN_DEFAULT));
   ASSERT(1 == timer_cb_called);
 
   MAKE_VALGRIND_HAPPY();
+#undef TIMEOUT
   return 0;
 }
 
@@ -220,12 +227,19 @@ TEST_IMPL(threadpool_cancel_getnameinfo) {
   r = uv_getnameinfo(loop, reqs + 3, getnameinfo_cb, (const struct sockaddr*)&addr4, 0);
   ASSERT(r == 0);
 
+#if defined(__APPLE__) && defined(_USE_ASYNC_GETNAME_INFO)
+  # define TIMEOUT 0
+#else
+  # define TIMEOUT 10
+#endif
+
   ASSERT(0 == uv_timer_init(loop, &ci.timer_handle));
-  ASSERT(0 == uv_timer_start(&ci.timer_handle, timer_cb, 10, 0));
+  ASSERT(0 == uv_timer_start(&ci.timer_handle, timer_cb, TIMEOUT, 0));
   ASSERT(0 == uv_run(loop, UV_RUN_DEFAULT));
   ASSERT(1 == timer_cb_called);
 
   MAKE_VALGRIND_HAPPY();
+#undef TIMEOUT
   return 0;
 }
 

@@ -54,6 +54,14 @@ AC_SEARCH_LIBS([clock_gettime], [rt])
 AC_SEARCH_LIBS([sendfile], [sendfile])
 AC_SEARCH_LIBS([socket], [socket])
 AC_SYS_LARGEFILE
+AC_ARG_ENABLE(async-getaddrinfo-on-osx,
+              AS_HELP_STRING([--disable-async-getaddrinfo-on-osx],
+                             [don't use async getaddrinfo on OS X]),
+              , enable_async_addrinfo_on_osx=yes)
+AC_ARG_ENABLE(async-getnameinfo-on-osx,
+              AS_HELP_STRING([--disable-async-getnameinfo-on-osx],
+                             [don't use async getnameinfo on OS X]),
+              , enable_async_nameinfo_on_osx=yes)
 AM_CONDITIONAL([AIX],      [AS_CASE([$host_os],[aix*],          [true], [false])])
 AM_CONDITIONAL([ANDROID],  [AS_CASE([$host_os],[linux-android*],[true], [false])])
 AM_CONDITIONAL([CYGWIN],   [AS_CASE([$host_os],[cygwin*],       [true], [false])])
@@ -79,6 +87,12 @@ AS_CASE([$host_os], [kfreebsd*], [
 ])
 AS_CASE([$host_os], [haiku], [
     LIBS="$LIBS -lnetwork"
+])
+AS_CASE(["x$enable_async_addrinfo_on_osx"], ["xyes"], [
+  CFLAGS="$CFLAGS -D_USE_ASYNC_ADDR_INFO=1"
+])
+AS_CASE(["x$enable_async_nameinfo_on_osx"], ["xyes"], [
+  CFLAGS="$CFLAGS -D_USE_ASYNC_GETNAME_INFO=1"
 ])
 AC_CHECK_HEADERS([sys/ahafs_evProds.h])
 AC_CONFIG_FILES([Makefile libuv.pc])

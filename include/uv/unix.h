@@ -117,6 +117,14 @@ struct uv__io_s {
 # define UV_STREAM_PRIVATE_PLATFORM_FIELDS /* empty */
 #endif
 
+#ifndef UV_GETADDRINFO_PLATFORM_PRIVATE_FIELDS
+# define UV_GETADDRINFO_PLATFORM_PRIVATE_FIELDS /* empty */
+#endif
+
+#ifndef UV_GETNAMEINFO_PLATFORM_PRIVATE_FIELDS
+# define UV_GETNAMEINFO_PLATFORM_PRIVATE_FIELDS /* empty */
+#endif
+
 /* Note: May be cast to struct iovec. See writev(2). */
 typedef struct uv_buf_t {
   char* base;
@@ -341,7 +349,8 @@ typedef struct {
   char* hostname;                                                             \
   char* service;                                                              \
   struct addrinfo* addrinfo;                                                  \
-  int retcode;
+  int retcode;                                                                \
+  UV_GETADDRINFO_PLATFORM_PRIVATE_FIELDS                                      \
 
 #define UV_GETNAMEINFO_PRIVATE_FIELDS                                         \
   struct uv__work work_req;                                                   \
@@ -350,7 +359,8 @@ typedef struct {
   int flags;                                                                  \
   char host[NI_MAXHOST];                                                      \
   char service[NI_MAXSERV];                                                   \
-  int retcode;
+  int retcode;                                                                \
+  UV_GETNAMEINFO_PLATFORM_PRIVATE_FIELDS                                      \
 
 #define UV_PROCESS_PRIVATE_FIELDS                                             \
   void* queue[2];                                                             \

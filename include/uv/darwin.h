@@ -30,9 +30,45 @@
 # define UV_PLATFORM_SEM_T semaphore_t
 #endif
 
+#if !defined(_USE_ASYNC_ADDR_INFO) && !defined(_USE_ASYNC_GETNAME_INFO)
+# define UV_IO_PRIVATE_PLATFORM_EXTRA_FIELDS /* empty */
+
+#elif defined(_USE_ASYNC_ADDR_INFO) && defined(_USE_ASYNC_GETNAME_INFO)
+# define UV_IO_PRIVATE_PLATFORM_EXTRA_FIELDS                                  \
+  unsigned int  is_mach_port;                                                 \
+  struct uv_getaddrinfo_s *getaddrinfo_req;                                   \
+  struct uv_getnameinfo_s *getnameinfo_req;
+
+#elif defined(_USE_ASYNC_ADDR_INFO) && !defined(_USE_ASYNC_GETNAME_INFO)
+# define UV_IO_PRIVATE_PLATFORM_EXTRA_FIELDS                                  \
+  unsigned int  is_mach_port;                                                 \
+  struct uv_getaddrinfo_s *getaddrinfo_req;
+
+#elif !defined(_USE_ASYNC_ADDR_INFO) && defined(_USE_ASYNC_GETNAME_INFO)
+# define UV_IO_PRIVATE_PLATFORM_EXTRA_FIELDS                                  \
+  unsigned int  is_mach_port;                                                 \
+  struct uv_getnameinfo_s *getnameinfo_req;
+
+#endif
+
+#if defined(_USE_ASYNC_ADDR_INFO)
+# define UV_GETADDRINFO_PLATFORM_PRIVATE_EXTRA_FIELDS                         \
+    uv__io_t async_addrinfo_io;
+#else
+# define UV_GETADDRINFO_PLATFORM_PRIVATE_EXTRA_FIELDS /* empty */
+#endif
+
+#if defined(_USE_ASYNC_GETNAME_INFO)
+# define UV_GETNAMEINFO_PLATFORM_PRIVATE_EXTRA_FIELDS                         \
+    uv__io_t async_getnameinfo_io;
+#else
+# define UV_GETNAMEINFO_PLATFORM_PRIVATE_EXTRA_FIELDS /* empty */
+#endif
+
 #define UV_IO_PRIVATE_PLATFORM_FIELDS                                         \
   int rcount;                                                                 \
   int wcount;                                                                 \
+  UV_IO_PRIVATE_PLATFORM_EXTRA_FIELDS                                         \
 
 #define UV_PLATFORM_LOOP_FIELDS                                               \
   uv_thread_t cf_thread;                                                      \
@@ -55,6 +91,12 @@
 
 #define UV_STREAM_PRIVATE_PLATFORM_FIELDS                                     \
   void* select;                                                               \
+
+#define UV_GETADDRINFO_PLATFORM_PRIVATE_FIELDS                                \
+  UV_GETADDRINFO_PLATFORM_PRIVATE_EXTRA_FIELDS                                \
+
+#define UV_GETNAMEINFO_PLATFORM_PRIVATE_FIELDS                                \
+  UV_GETNAMEINFO_PLATFORM_PRIVATE_EXTRA_FIELDS                                \
 
 #define UV_HAVE_KQUEUE 1
 

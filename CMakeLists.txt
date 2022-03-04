@@ -32,6 +32,15 @@ endif()
 
 option(ASAN "Enable AddressSanitizer (ASan)" OFF)
 option(TSAN "Enable ThreadSanitizer (TSan)" OFF)
+option(ENABLE_ASYNC_ADDRINFO_ON_OSX "Enable async getaddrinfo on OSX" ON)
+if(ENABLE_ASYNC_ADDRINFO_ON_OSX)
+  add_definitions(-D_USE_ASYNC_ADDR_INFO=1)
+endif()
+
+option(ENABLE_ASYNC_GETNAMEINFO_ON_OSX "Enable async getnameinfo on OSX" ON)
+if(ENABLE_ASYNC_GETNAMEINFO_ON_OSX)
+  add_definitions(-D_USE_ASYNC_GETNAME_INFO=1)
+endif()
 
 if((ASAN OR TSAN) AND NOT (CMAKE_C_COMPILER_ID MATCHES "AppleClang|GNU|Clang"))
   message(SEND_ERROR "Sanitizer support requires clang or gcc. Try again with -DCMAKE_C_COMPILER.")

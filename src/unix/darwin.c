@@ -39,10 +39,26 @@ static uv_once_t once = UV_ONCE_INIT;
 static uint64_t (*time_func)(void);
 static mach_timebase_info_data_t timebase;
 
+#if defined(_USE_ASYNC_ADDR_INFO)
+static uv_once_t init_getaddrinfo_once = UV_ONCE_INIT;
+#endif
+
+#if defined(_USE_ASYNC_GETNAME_INFO)
+static uv_once_t init_getnameinfo_once = UV_ONCE_INIT;
+#endif
+
 typedef unsigned char UInt8;
 
 int uv__platform_loop_init(uv_loop_t* loop) {
   loop->cf_state = NULL;
+
+#if defined(_USE_ASYNC_ADDR_INFO)
+  uv_once(&init_getaddrinfo_once, uv__getaddrinfo_init);
+#endif
+
+#if defined(_USE_ASYNC_GETNAME_INFO)
+  uv_once(&init_getnameinfo_once, uv__getnameinfo_init);
+#endif
 
   if (uv__kqueue_init(loop))
     return UV__ERR(errno);

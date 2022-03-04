@@ -35,6 +35,52 @@
 /* EAI_* constants. */
 #include <netdb.h>
 
+static void uv__getaddrinfo_common_done(uv_getaddrinfo_t* req, int status);
+
+#if defined(__APPLE__) && defined(_USE_ASYNC_ADDR_INFO)
+#include <dlfcn.h>
+#include <mach/mach.h>
+
+typedef void (*getaddrinfo_async_callback)(int32_t, struct addrinfo *, void *);
+static int32_t (*getaddrinfo_async_start)(mach_port_t *, const char *, const char *, const struct addrinfo *, getaddrinfo_async_callback, void *);
+static int32_t (*getaddrinfo_async_handle_reply)(void *);
+static void (*getaddrinfo_async_cancel)(mach_port_t);
+
+void uv__getaddrinfo_init(void) {
+  LOAD_LIBINFO_HANDLES(getaddrinfo_async_start,
+                       getaddrinfo_async_handle_reply,
+                       getaddrinfo_async_cancel);
+}
+
+static void uv__getaddrinfo_async_done(int32_t status, struct addrinfo *addrinfo, void *context) {
+  uv_getaddrinfo_t *req;
+
+  req = context;
+  req->addrinfo = addrinfo;
+  if (status == UV_UNKNOWN || status == UV_EAI_CANCELED)
+    req->retcode = status;
+  else
+    req->retcode = uv__getaddrinfo_translate_error(status);
+  uv__io_close(req->loop, &req->async_addrinfo_io);
+  uv__req_unregister(req->loop, req);
+  uv__getaddrinfo_common_done(req, status);
+}
+
+static void uv__getaddrinfo_async_work(uv_loop_t* loop, uv__io_t* w, unsigned int fflags) {
+  READ_MACH_MSG_AND_HANDLE_DATA(w,
+                                getaddrinfo_async_handle_reply,
+                                uv__getaddrinfo_async_done,
+                                UV_UNKNOWN,
+                                NULL,
+                                w->getaddrinfo_req);
+}
+
+void uv__getaddrinfo_cancel(uv_getaddrinfo_t* req) {
+  assert(req->async_addrinfo_io.fd != 0);
+  getaddrinfo_async_cancel(req->async_addrinfo_io.fd);
+  uv__getaddrinfo_async_done(UV_EAI_CANCELED, NULL, req);
+}
+#endif
 
 int uv__getaddrinfo_translate_error(int sys_err) {
   switch (sys_err) {
@@ -95,22 +141,7 @@ int uv__getaddrinfo_translate_error(int sys_err) {
 }
 
 
-static void uv__getaddrinfo_work(struct uv__work* w) {
-  uv_getaddrinfo_t* req;
-  int err;
-
-  req = container_of(w, uv_getaddrinfo_t, work_req);
-  err = getaddrinfo(req->hostname, req->service, req->hints, &req->addrinfo);
-  req->retcode = uv__getaddrinfo_translate_error(err);
-}
-
-
-static void uv__getaddrinfo_done(struct uv__work* w, int status) {
-  uv_getaddrinfo_t* req;
-
-  req = container_of(w, uv_getaddrinfo_t, work_req);
-  uv__req_unregister(req->loop, req);
-
+static void uv__getaddrinfo_common_done(uv_getaddrinfo_t* req, int status) {
   /* See initialization in uv_getaddrinfo(). */
   if (req->hints)
     uv__free(req->hints);
@@ -134,6 +165,24 @@ static void uv__getaddrinfo_done(struct uv__work* w, int status) {
     req->cb(req, req->retcode, req->addrinfo);
 }
 
+
+static void uv__getaddrinfo_work(struct uv__work* w) {
+  uv_getaddrinfo_t* req;
+  int err;
+
+  req = container_of(w, uv_getaddrinfo_t, work_req);
+  err = getaddrinfo(req->hostname, req->service, req->hints, &req->addrinfo);
+  req->retcode = uv__getaddrinfo_translate_error(err);
+}
+
+
+static void uv__getaddrinfo_done(struct uv__work* w, int status) {
+  uv_getaddrinfo_t* req;
+
+  req = container_of(w, uv_getaddrinfo_t, work_req);
+  uv__req_unregister(req->loop, req);
+  uv__getaddrinfo_common_done(req, status);
+}
 
 int uv_getaddrinfo(uv_loop_t* loop,
                    uv_getaddrinfo_t* req,
@@ -203,6 +252,27 @@ int uv_getaddrinfo(uv_loop_t* loop,
     req->hostname = memcpy(buf + len, hostname, hostname_len);
 
   if (cb) {
+#if defined(__APPLE__) && defined(_USE_ASYNC_ADDR_INFO)
+    if (getaddrinfo_async_start && getaddrinfo_async_handle_reply && getaddrinfo_async_cancel) {
+      int32_t get_addrinfo_result;
+      mach_port_t port;
+
+      get_addrinfo_result = getaddrinfo_async_start(&port,
+                                                    req->hostname,
+                                                    req->service,
+                                                    req->hints,
+                                                    uv__getaddrinfo_async_done,
+                                                    req);
+      if (get_addrinfo_result == -1) {
+        return get_addrinfo_result;
+      }
+      uv__io_init(&req->async_addrinfo_io, uv__getaddrinfo_async_work, port);
+      req->async_addrinfo_io.getaddrinfo_req = req;
+      req->async_addrinfo_io.is_mach_port = 1;
+      uv__io_start(req->loop, &req->async_addrinfo_io, POLLIN);
+      return 0;
+    }
+#endif
     uv__work_submit(loop,
                     &req->work_req,
                     UV__WORK_SLOW_IO,

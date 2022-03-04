@@ -370,10 +370,22 @@ int uv_cancel(uv_req_t* req) {
     wreq = &((uv_fs_t*) req)->work_req;
     break;
   case UV_GETADDRINFO:
+#if defined(__APPLE__) && defined(_USE_ASYNC_ADDR_INFO)
+    if (((uv_getaddrinfo_t*) req)->async_addrinfo_io.is_mach_port) {
+      uv__getaddrinfo_cancel((uv_getaddrinfo_t*) req);
+      return 0;
+    }
+#endif
     loop =  ((uv_getaddrinfo_t*) req)->loop;
     wreq = &((uv_getaddrinfo_t*) req)->work_req;
     break;
   case UV_GETNAMEINFO:
+#if defined(__APPLE__) && defined(_USE_ASYNC_GETNAME_INFO)
+    if (((uv_getnameinfo_t*) req)->async_getnameinfo_io.is_mach_port) {
+      uv__getnameinfo_cancel((uv_getnameinfo_t*) req);
+      return 0;
+    }
+#endif
     loop = ((uv_getnameinfo_t*) req)->loop;
     wreq = &((uv_getnameinfo_t*) req)->work_req;
     break;

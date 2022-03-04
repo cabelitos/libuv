@@ -885,6 +885,20 @@ void uv__io_init(uv__io_t* w, uv__io_cb cb, int fd) {
 #if defined(UV_HAVE_KQUEUE)
   w->rcount = 0;
   w->wcount = 0;
+
+#if defined(__APPLE__)
+  w->is_mach_port = 0;
+
+#if defined(_USE_ASYNC_ADDR_INFO)
+  w->getaddrinfo_req = NULL;
+#endif
+
+#if defined(_USE_ASYNC_GETNAME_INFO)
+  w->getnameinfo_req = NULL;
+#endif
+
+#endif /* defined(__APPLE__) */
+
 #endif /* defined(UV_HAVE_KQUEUE) */
 }
 

@@ -369,5 +369,73 @@ uv__fs_copy_file_range(int fd_in,
                        unsigned int flags);
 #endif
 
+#if defined(__APPLE__)
+
+#if defined(_USE_ASYNC_ADDR_INFO)
+void uv__getaddrinfo_init(void);
+void uv__getaddrinfo_cancel(uv_getaddrinfo_t* req);
+#endif
+
+#if defined(_USE_ASYNC_GETNAME_INFO)
+void uv__getnameinfo_init(void);
+void uv__getnameinfo_cancel(uv_getnameinfo_t* req);
+#endif
+
+#if defined(_USE_ASYNC_GETNAME_INFO) || defined(_USE_ASYNC_ADDR_INFO)
+
+# define LOAD_LIBINFO_HANDLES(start_handle, reply_handle, cancel_handle)    \
+  do {                                                                      \
+    void *handle;                                                           \
+                                                                            \
+    handle = dlopen("libinfo.dylib", RTLD_LOCAL | RTLD_LAZY);               \
+    if (!handle)                                                            \
+      return;                                                               \
+                                                                            \
+    (start_handle) = dlsym(handle, #start_handle);                          \
+    if (!(start_handle))                                                    \
+      goto exit;                                                            \
+                                                                            \
+    (reply_handle) = dlsym(handle, #reply_handle);                          \
+    if (!(reply_handle))                                                    \
+      goto err_async_handle_reply;                                          \
+                                                                            \
+    (cancel_handle) = dlsym(handle, #cancel_handle);                        \
+    if (!(cancel_handle))                                                   \
+      goto err_async_cancel;                                                \
+                                                                            \
+    dlclose(handle);                                                        \
+    return;                                                                 \
+                                                                            \
+  err_async_cancel:                                                         \
+    (reply_handle) = NULL;                                                  \
+  err_async_handle_reply:                                                   \
+    (start_handle) = NULL;                                                  \
+  exit:                                                                     \
+  dlclose(handle);                                                          \
+  } while (0)
+
+# define READ_MACH_MSG_AND_HANDLE_DATA(io_handle, handle_reply, handle_error, ...)        \
+  do {                                                                                    \
+    mach_msg_empty_rcv_t msg;                                                             \
+    mach_msg_return_t status;                                                             \
+                                                                                          \
+    status = mach_msg(&msg.header,                                                        \
+                      MACH_RCV_MSG,                                                       \
+                      0,                                                                  \
+                      sizeof(msg),                                                        \
+                      (io_handle)->fd,                                                    \
+                      MACH_MSG_TIMEOUT_NONE,                                              \
+                      MACH_PORT_NULL);                                                    \
+    if (status != KERN_SUCCESS) {                                                         \
+      (handle_error)(__VA_ARGS__);                                                        \
+    } else {                                                                              \
+      (handle_reply)(&msg);                                                               \
+    }                                                                                     \
+  }                                                                                       \
+  while (0)
+#endif
+
+#endif /* defined(_USE_ASYNC_GETNAME_INFO) || defined(_USE_ASYNC_ADDR_INFO) */
+
 
 #endif /* UV_UNIX_INTERNAL_H_ */
