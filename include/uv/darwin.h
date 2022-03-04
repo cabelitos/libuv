@@ -30,9 +30,25 @@
 # define UV_PLATFORM_SEM_T semaphore_t
 #endif
 
+#if defined(_USE_LIBINFO)
+# define UV_IO_PRIVATE_PLATFORM_EXTRA_FIELDS                                  \
+  void *data;
+
+# define UV_GETADDRINFO_PLATFORM_PRIVATE_EXTRA_FIELDS                         \
+    uv__io_t async_addrinfo_io;
+# define UV_GETNAMEINFO_PLATFORM_PRIVATE_EXTRA_FIELDS                         \
+    uv__io_t async_getnameinfo_io;
+
+#else
+# define UV_IO_PRIVATE_PLATFORM_EXTRA_FIELDS /* empty */
+# define UV_GETADDRINFO_PLATFORM_PRIVATE_EXTRA_FIELDS /* empty */
+# define UV_GETNAMEINFO_PLATFORM_PRIVATE_EXTRA_FIELDS /* empty */
+#endif
+
 #define UV_IO_PRIVATE_PLATFORM_FIELDS                                         \
   int rcount;                                                                 \
   int wcount;                                                                 \
+  UV_IO_PRIVATE_PLATFORM_EXTRA_FIELDS                                         \
 
 #define UV_PLATFORM_LOOP_FIELDS                                               \
   uv_thread_t cf_thread;                                                      \
@@ -55,6 +71,12 @@
 
 #define UV_STREAM_PRIVATE_PLATFORM_FIELDS                                     \
   void* select;                                                               \
+
+#define UV_GETADDRINFO_PLATFORM_PRIVATE_FIELDS                                \
+  UV_GETADDRINFO_PLATFORM_PRIVATE_EXTRA_FIELDS                                \
+
+#define UV_GETNAMEINFO_PLATFORM_PRIVATE_FIELDS                                \
+  UV_GETNAMEINFO_PLATFORM_PRIVATE_EXTRA_FIELDS                                \
 
 #define UV_HAVE_KQUEUE 1
 

@@ -11,6 +11,7 @@ include(CMakeDependentOption)
 include(CheckCCompilerFlag)
 include(GNUInstallDirs)
 include(CTest)
+INCLUDE(CheckLibraryExists)
 
 set(CMAKE_C_VISIBILITY_PRESET hidden)
 set(CMAKE_C_STANDARD_REQUIRED ON)
@@ -32,6 +33,12 @@ endif()
 
 option(ASAN "Enable AddressSanitizer (ASan)" OFF)
 option(TSAN "Enable ThreadSanitizer (TSan)" OFF)
+option(USE_OSX_ASYNC_LIBINFO "Enable async getnameinfo on OSX" ON)
+
+CHECK_LIBRARY_EXISTS(info getaddrinfo_async_start CMAKE_LIBRARY_PATH LIBINFO_EXISTS)
+if(USE_OSX_ASYNC_LIBINFO AND APPLE AND LIBINFO_EXISTS)
+  add_definitions(-D_USE_LIBINFO=1)
+endif()
 
 if((ASAN OR TSAN) AND NOT (CMAKE_C_COMPILER_ID MATCHES "AppleClang|GNU|Clang"))
   message(SEND_ERROR "Sanitizer support requires clang or gcc. Try again with -DCMAKE_C_COMPILER.")
