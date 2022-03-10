@@ -38,7 +38,6 @@
     uv__io_t async_addrinfo_io;
 # define UV_GETNAMEINFO_PLATFORM_PRIVATE_EXTRA_FIELDS                         \
     uv__io_t async_getnameinfo_io;
-
 #else
 # define UV_IO_PRIVATE_PLATFORM_EXTRA_FIELDS /* empty */
 # define UV_GETADDRINFO_PLATFORM_PRIVATE_EXTRA_FIELDS /* empty */

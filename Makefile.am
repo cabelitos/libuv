@@ -43,7 +43,9 @@ libuv_la_SOURCES = src/fs-poll.c \
                    src/uv-data-getter-setters.c \
                    src/uv-common.c \
                    src/uv-common.h \
-                   src/version.c
+                   src/version.c \
+                   src/hash.c \
+                   src/hash.h
 
 if SUNOS
 # Can't be turned into a CC_CHECK_CFLAGS in configure.ac, it makes compilers
